@@ -2,8 +2,20 @@ import gradio as gr
 import time
 import numpy as np
 from pathlib import Path
+
 from google import genai
 from google.genai import types
+
+from dotenv import load_dotenv
+import os
+from sarvamai import SarvamAI
+from sarvamai.play import save
+
+load_dotenv()
+sarvam_key = os.getenv("SARVAM_API_KEY")
+
+google_client = genai.Client()
+client = SarvamAI(api_subscription_key=sarvam_key )
 
 
 if gr.NO_RELOAD:
@@ -35,7 +47,6 @@ if gr.NO_RELOAD:
 
     gr.set_static_paths(paths=[Path.cwd().absolute()/"assets"])
 
-client = genai.Client()
 
 custom_css = """
 .gradio-container {
@@ -142,33 +153,38 @@ with gr.Blocks(theme=theme, css=custom_css, title="App") as demo:
             )
 
             def story():
-                response = client.models.generate_content(
+                print("hello")
+                response = google_client.models.generate_content(
                     model="gemini-2.5-flash",
-                    contents="How does AI work?"
+                    contents="Generate a short bedtime story for children (about 100 words) inspired by Indian culture and tradition. The story should be engaging, positive, and suitable for kids. Write in English."
                 )
-                print(response.text)
+                
 
-                response = client.models.generate_content(
-                    model="gemini-2.5-flash-preview-tts",
-                    contents="Say cheerfully: Have a wonderful day!",
-                    config=types.GenerateContentConfig(
-                        response_modalities=["AUDIO"],
-                        speech_config=types.SpeechConfig(
-                            voice_config=types.VoiceConfig(
-                                prebuilt_voice_config=types.PrebuiltVoiceConfig(
-                                voice_name='Kore',
-                                )
-                            )
-                        ),
-                    )
+                stry = client.text.translate(
+                    input=response.text,
+                    source_language_code="auto",
+                    target_language_code="ml-IN",
+                    speaker_gender="Female"
                 )
 
-                data = response.candidates[0].content.parts[0].inline_data.data
-                file_name='out.wav'
+                # Convert text to speech
+                audio = client.text_to_speech.convert(
+                    target_language_code="ml-IN",
+                    text=stry.translated_text,
+                    model="bulbul:v2",
+                    speaker="arya"
+                )
+                save(audio, "output.wav")
 
-
-
-            chat_input.submit(story, None, None)
+                return [gr.Label(value=response.text, 
+                           show_label=False, 
+                           visible=True,
+                           elem_id="color"),
+                        gr.Audio(value="output.wav", 
+                           show_label=True, 
+                           visible=True, 
+                           show_download_button=False,
+                           elem_id="color")]
         
         gr.HTML("</br>")
 
@@ -185,6 +201,9 @@ with gr.Blocks(theme=theme, css=custom_css, title="App") as demo:
                            visible=True, 
                            show_download_button=False,
                            elem_id="color")
+            
+            chat_input.submit(story, None, [out, aud])
+        
 
 demo.launch()
 
