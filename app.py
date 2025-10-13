@@ -25,11 +25,17 @@ if gr.NO_RELOAD:
     history = []
 
     translation = {
-        "English": "eng_Latn",
-        "Hindi": "hin_Deva",
-        "Malayalam": "mal_Mlym",
-        "Tamil": "tam_Taml",
-        "Telugu": "tel_Telu"
+        "English": "en-IN",
+        "Hindi": "hi-IN",
+        "Bengali": "bn-IN",
+        "Tamil": "ta-IN",
+        "Telugu": "te-IN",
+        "Kannada": "kn-IN",
+        "Malayalam": "ml-IN",
+        "Marathi": "mr-IN",
+        "Gujarati": "gu-IN",
+        "Punjabi": "pa-IN",
+        "Odia": "od-IN"
     }
 
     speakers = {
@@ -152,24 +158,39 @@ with gr.Blocks(theme=theme, css=custom_css, title="App") as demo:
                 elem_id="color"
             )
 
-            def story():
-                print("hello")
+            def story(lang,chat_input):
+                translation = {
+                    "English": "en-IN",
+                    "Hindi": "hi-IN",
+                    "Bengali": "bn-IN",
+                    "Tamil": "ta-IN",
+                    "Telugu": "te-IN",
+                    "Kannada": "kn-IN",
+                    "Malayalam": "ml-IN",
+                    "Marathi": "mr-IN",
+                    "Gujarati": "gu-IN",
+                    "Punjabi": "pa-IN",
+                    "Odia": "od-IN"
+                }
+
+                print(lang, chat_input)
+                
                 response = google_client.models.generate_content(
                     model="gemini-2.5-flash",
                     contents="Generate a short bedtime story for children (about 100 words) inspired by Indian culture and tradition. The story should be engaging, positive, and suitable for kids. Write in English."
                 )
                 
-
+                
                 stry = client.text.translate(
                     input=response.text,
                     source_language_code="auto",
-                    target_language_code="ml-IN",
+                    target_language_code=translation[lang],
                     speaker_gender="Female"
                 )
 
                 # Convert text to speech
                 audio = client.text_to_speech.convert(
-                    target_language_code="ml-IN",
+                    target_language_code=translation[lang],
                     text=stry.translated_text,
                     model="bulbul:v2",
                     speaker="arya"
@@ -202,7 +223,7 @@ with gr.Blocks(theme=theme, css=custom_css, title="App") as demo:
                            show_download_button=False,
                            elem_id="color")
             
-            chat_input.submit(story, None, [out, aud])
+            chat_input.submit(story, [lang, chat_input], [out, aud])
         
 
 demo.launch()
