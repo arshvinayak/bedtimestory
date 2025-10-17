@@ -19,10 +19,12 @@ client = SarvamAI(api_subscription_key=sarvam_key )
 
 
 if gr.NO_RELOAD:
-    stop_generation = None
-    prompt = input_file = None
-
-    history = []
+    path = "output.wav"
+    try:
+        os.remove(path)
+    except FileNotFoundError:
+        print("File not found:", path)
+    
 
     translation = {
         "English": "en-IN",
@@ -62,9 +64,13 @@ custom_css = """
 }
 
 span.md.svelte-7ddecg.prose> h1, 
-span.md.svelte-7ddecg.prose> p,
-h2.output-class.svelte-1mutzus {
+span.md.svelte-7ddecg.prose> p {
     color: #ffffff !important;
+}
+
+textarea.svelte-1ae7ssi {
+    color: #ffffff !important;
+    font-size: 15px !important;
 }
 
 
@@ -174,21 +180,58 @@ with gr.Blocks(theme=theme, css=custom_css, title="App") as demo:
                 }
 
                 print(lang, chat_input)
+
+                system_instruction = """
+                You are a revered **storyteller (Kathaakar)**, entrusted with generating soothing, gentle, and imaginative **bedtime stories** steeped in the rich atmosphere, wisdom, and comforting traditions of India.
+
+                ### **Core Identity & Goal**
+                1.  **Identity:** You speak with the gentle, rhythmic cadence of a beloved grandparent (*Dadi/Nani*) sharing a story in the quiet twilight (*Sandhya*).
+                2.  **Goal:** To help a child relax and feel protected by the warmth of family and culture, guiding them peacefully to sleep.
+                3.  **Tone:** **Profoundly calm, deeply comforting, and imbued with quiet reverence** for nature and simple life. Absolutely **NO** conflict, danger, or emotional intensity.
+
+                ### **Mandatory Cultural & Setting Elements**
+                1.  **Setting:** The story must be rooted in a timeless, rural or small-town Indian environment. Descriptions must use highly specific imagery:
+                    * **Architecture:** The glow of a single **Diya** (oil lamp) casting shadows, sitting on a cool **veranda** (porch), the smell of **cow dung smoke** from a nearby fire, or the feel of a freshly swept **aangan** (courtyard).
+                    * **Nature:** The sound of the **Muezzin's call** or **temple bells** fading in the distance. The whispering of a huge **Banyan tree**. Moonlight reflecting off a village **pond (taalaab)**.
+                2.  **Sensory & Ritual Details:** Weave these comforting details naturally into the narrative:
+                    * **Routine:** The characters perform a small, calming evening ritual (e.g., sipping warm **haldi-doodh** (turmeric milk), lighting a small incense stick, folding a **Dohra** (light quilt)).
+                    * **Smells:** The scent of **jasmine** (*mogra*), wet earth (*mitti ki khushboo*), or soft cooked **dal**.
+                    * **Soundscape:** Only gentle sounds: a bullock cart moving slowly, crickets chirping, or the quiet rustle of a **sari**.
+                3.  **Themes & Wisdom:** Stories should explore simple, deep truths found in **Panchatantra** or **Jataka** tales, but filtered for calm:
+                    * The quiet power of patience, the value of sharing a few **rotis**, the magic of nature's simple cycles, or kindness as a path to happiness.
+                4.  **Characters:** Must be culturally authentic. Use names and roles appropriate for the setting (e.g., a kind artisan, a simple farmer, a playful village elder).
+
+                ### **Language & Structure Directives**
+                1.  **Cultural Lexicon:** The narrative must feel like a translation from a regional language. Incorporate **4–6 gentle regional words** per story (e.g., *beta*, *chai*, *mithai*, *shanti*, *pyari*, *chota*, *namaste*), defining them implicitly through context.
+                2.  **Pacing and Length:** The pace must be **extremely slow, lulling, and repetitive** for maximum hypnotic effect.
+                3.  **Ending:** The story must conclude by bringing the main character to a deeply peaceful, asleep state, often under the watchful eyes of a family member. The final sentence must directly transition the child listener to their own sleep.
+
+                ### **Instruction for Generation**
+                * Acknowledge and incorporate the user's request (e.g., a specific animal or child’s name), while ensuring all cultural directives are met.
+                * **Begin** with a rich, descriptive opening that immediately sets the quiet Indian twilight scene.
+                * **End** with a final, loving blessing for peaceful sleep.
+                """
                 
                 response = google_client.models.generate_content(
                     model="gemini-2.5-flash",
-                    contents="Generate a short bedtime story for children (about 100 words) inspired by Indian culture and tradition. The story should be engaging, positive, and suitable for kids. Write in English."
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_instruction,
+                        temperature=2.0),
+                    contents=chat_input+" Make sure the length of the story is short to medium and is atmost 1000 characters.",
                 )
-                
-                
+
+                print(len(response.text))
+
+                # translate the story
                 stry = client.text.translate(
                     input=response.text,
                     source_language_code="auto",
                     target_language_code=translation[lang],
-                    speaker_gender="Female"
+                    speaker_gender="Female",
+                    mode="modern-colloquial"
                 )
 
-                # Convert text to speech
+                # Convert story to speech
                 audio = client.text_to_speech.convert(
                     target_language_code=translation[lang],
                     text=stry.translated_text,
@@ -197,9 +240,12 @@ with gr.Blocks(theme=theme, css=custom_css, title="App") as demo:
                 )
                 save(audio, "output.wav")
 
-                return [gr.Label(value=response.text, 
-                           show_label=False, 
+                return [gr.Textbox(value=response.text, 
+                           show_label=False,
+                           interactive=True,
                            visible=True,
+                           lines=5,
+                           min_width=700,
                            elem_id="color"),
                         gr.Audio(value="output.wav", 
                            show_label=True, 
@@ -210,9 +256,12 @@ with gr.Blocks(theme=theme, css=custom_css, title="App") as demo:
         gr.HTML("</br>")
 
         with gr.Column(scale=2, min_width=500, elem_classes="center-right-row"):
-            out = gr.Label(value="Your story will appear here...", 
-                           show_label=False, 
+            out = gr.Textbox(value="Your story will appear here...", 
+                           show_label=False,
+                           interactive=False,
                            visible=True,
+                           lines=5,
+                           min_width=700,
                            elem_id="color")
             
             gr.HTML("</br>")
