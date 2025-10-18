@@ -64,20 +64,21 @@ custom_css = """
 }
 
 span.md.svelte-7ddecg.prose> h1, 
-span.md.svelte-7ddecg.prose> p {
-    color: #ffffff !important;
+span.md.svelte-7ddecg.prose> p,
+h2.output-class.svelte-1mutzus {
+    color: #ffffff !important;    
+    border: None !important;
 }
 
-textarea.svelte-1ae7ssi {
-    color: #ffffff !important;
-    font-size: 15px !important;
+.prose.svelte-lag733 {
+    background: url('/gradio_api/file=assets/landscape.png') !important;    
 }
 
-
-input.svelte-1ae7ssi.svelte-1ae7ssi, textarea.svelte-1ae7ssi.svelte-1ae7ssi{
+input.svelte-1ae7ssi.svelte-1ae7ssi, 
+textarea.svelte-1ae7ssi.svelte-1ae7ssi{
     background: #000000 !important;
     color: #ffffff !important;
-
+    border: None !important;
 }
 
 div.svelte-1vd8eap {
@@ -93,7 +94,6 @@ label.svelte-j0zqjt {
     color: #ffffff !important;
 }
 
-
 #color.block.svelte-1svsvh2.auto-margin input{
     color: #ffffff !important;
 }
@@ -108,7 +108,6 @@ label.svelte-j0zqjt {
     color: #000000 !important;
 }
 
-    
 .center-left-row {
     min-height: 50vh;
     display: flex !important;
@@ -215,9 +214,8 @@ with gr.Blocks(theme=theme, css=custom_css, title="App") as demo:
                 response = google_client.models.generate_content(
                     model="gemini-2.5-flash",
                     config=types.GenerateContentConfig(
-                        system_instruction=system_instruction,
                         temperature=2.0),
-                    contents=chat_input+" Make sure the length of the story is short to medium and is atmost 1000 characters.",
+                    contents=chat_input,
                 )
 
                 print(len(response.text))
@@ -228,7 +226,6 @@ with gr.Blocks(theme=theme, css=custom_css, title="App") as demo:
                     source_language_code="auto",
                     target_language_code=translation[lang],
                     speaker_gender="Female",
-                    mode="modern-colloquial"
                 )
 
                 # Convert story to speech
