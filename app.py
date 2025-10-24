@@ -58,7 +58,7 @@ audio_np = np.array([], dtype=np.int16)  # Initialize audio with empty array
 def chunk_text(text, lang):
     """Splits text into chunks of at most max_length characters while preserving word boundaries."""
     chunks = []
-    max_length=1000
+    max_length = 2000
 
     while len(text) > max_length:
         split_index = text.rfind(" ", 0, max_length)  # Find the last space within limit
@@ -76,11 +76,11 @@ def chunk_text(text, lang):
     for idx, chunk in enumerate(chunks):
         response = client.text.translate(
             input=chunk,
-            source_language_code="auto",
+            source_language_code="en-IN",
             target_language_code=translation[lang],
             speaker_gender="Female",
-            output_script="spoken-form-in-native",
             enable_preprocessing=True,
+            model="sarvam-translate:v1"
         )
 
         translated_text = response.translated_text
