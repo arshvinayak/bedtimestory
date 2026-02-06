@@ -64,12 +64,13 @@ def chunk_text(text, lang):
         split_index = text.rfind(" ", 0, max_length)  # Find the last space within limit
         if split_index == -1:
             split_index = max_length  # No space found, force split at max_length
-
+        
         chunks.append(text[:split_index].strip())  # Trim spaces before adding
         text = text[split_index:].lstrip()  # Remove leading spaces for the next chunk
 
     if text:
         chunks.append(text.strip())  # Add the last chunk
+    
 
     # Translate each chunk
     translated_texts = []
@@ -235,7 +236,7 @@ with gr.Blocks(theme=theme, css=custom_css, title="App") as demo:
                     contents=chat_input,
                 )
 
-                print(len(response.text))
+                print(response.text)
                 # Translate story if needed
                 if lang == "English":
                     inp_stry = response.text.strip("**").replace("*", "")
