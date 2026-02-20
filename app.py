@@ -1,5 +1,7 @@
+import asyncio
+import base64
+import websockets
 import gradio as gr
-import time
 import numpy as np
 from pathlib import Path
 
@@ -8,18 +10,18 @@ from google.genai import types
 
 from dotenv import load_dotenv
 import os
-from sarvamai import SarvamAI
+from sarvamai import SarvamAI, AsyncSarvamAI, AudioOutput
 from sarvamai.play import save
 
 load_dotenv()
 sarvam_key = os.getenv("SARVAM_API_KEY")
 
 google_client = genai.Client()
-client = SarvamAI(api_subscription_key=sarvam_key )
-
+client = SarvamAI(api_subscription_key=sarvam_key)
+audio_client = AsyncSarvamAI(api_subscription_key=sarvam_key)
 
 if gr.NO_RELOAD:
-    path = "output.wav"
+    path = "output.mp3"
     try:
         os.remove(path)
     except FileNotFoundError:
@@ -55,7 +57,7 @@ frequency = 440  # Hz
 t = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
 audio_np = np.array([], dtype=np.int16)  # Initialize audio with empty array
 
-def chunk_text(text, lang):
+def chunkText(text, lang):
     """Splits text into chunks of at most max_length characters while preserving word boundaries."""
     chunks = []
     max_length = 2000
@@ -71,7 +73,8 @@ def chunk_text(text, lang):
     if text:
         chunks.append(text.strip())  # Add the last chunk
     
-
+    print([len(i) for i in chunks])
+    
     # Translate each chunk
     translated_texts = []
     for idx, chunk in enumerate(chunks):
@@ -88,9 +91,37 @@ def chunk_text(text, lang):
         translated_texts.append(translated_text)
 
     # Combine all translated chunks
-    final_translation = "\n".join(translated_texts)
+    final_translation = "".join(translated_texts)
     
     return final_translation
+
+async def generateAudio(inp_stry, lang):  
+    print(inp_stry)  
+
+    print('hello')
+    async with audio_client.text_to_speech_streaming.connect(model="bulbul:v3") as ws:
+        await ws.configure(
+            target_language_code=translation[lang], 
+            speaker="shubh",
+            max_chunk_length= 200
+        )
+
+        await ws.convert(inp_stry)
+
+        await ws.flush()
+
+        chunk_count = 0
+        with open("output.mp3", "wb") as f:
+            async for message in ws:
+                if isinstance(message, AudioOutput):
+                    chunk_count += 1
+                    audio_chunk = base64.b64decode(message.data.audio)
+                    f.write(audio_chunk)
+                    f.flush()
+        
+        if hasattr(ws, "_websocket") and not ws._websocket.closed:
+            await ws._websocket.close()
+            print("WebSocket connection closed.")
 
 
 
@@ -195,8 +226,6 @@ with gr.Blocks(theme=theme, css=custom_css, title="App") as demo:
             )
 
             def story(lang, chat_input):
-                # print(lang, chat_input)
-
                 system_instruction = """
                 You are a revered storyteller , entrusted with generating soothing, gentle, and imaginative bedtime stories steeped in the rich atmosphere, wisdom, and comforting traditions of India.
 
@@ -236,23 +265,14 @@ with gr.Blocks(theme=theme, css=custom_css, title="App") as demo:
                     contents=chat_input,
                 )
 
-                print(response.text)
                 # Translate story if needed
                 if lang == "English":
                     inp_stry = response.text.strip("**").replace("*", "")
                 else:
-                    inp_stry = chunk_text(response.text.strip("**").replace("*", ""), lang)
+                    inp_stry = chunkText(response.text.strip("**").replace("*", ""), lang)
 
-                
                 # Convert story to speech
-                audio = client.text_to_speech.convert(
-                    target_language_code=translation[lang],
-                    text=inp_stry,
-                    model="bulbul:v2",
-                    speaker="arya",
-                    enable_preprocessing=True
-                )
-                save(audio, "output.wav")
+                asyncio.run(generateAudio(inp_stry, lang))
 
                 return [gr.Textbox(value=inp_stry, 
                            show_label=False,
@@ -261,7 +281,7 @@ with gr.Blocks(theme=theme, css=custom_css, title="App") as demo:
                            lines=5,
                            min_width=700,
                            elem_id="color"),
-                        gr.Audio(value="output.wav", 
+                        gr.Audio(value="output.mp3", 
                            show_label=True, 
                            visible=True, 
                            show_download_button=False,
