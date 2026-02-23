@@ -1,4 +1,4 @@
-# 🌙 Bedtime Story Generator
+# Bedtime Story Generator
 
 An AI-powered web-app that generates soothing, culturally-rich bedtime stories and converts them to natural-sounding speech in multiple Indian languages.
 
